@@ -1,0 +1,61 @@
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(DT)
+library(scales)
+data <- read.csv("UberDataForSep14.csv")
+cat("Dimensions of Data:", dim(data))
+head(data)
+data$Date.Time <- as.POSIXct(data$Date.Time, format="%m/%d/%Y %H:%M:%S")
+data$Time <- format(as.POSIXct(data$Date.Time, format = "%m/%d/%Y %H:%M:%S"), format="%H:%M:%S")
+data$Date.Time <- ymd_hms(data$Date.Time)
+data$day <- factor(day(data$Date.Time))
+data$dayofweek <- factor(wday(data$Date.Time, label=TRUE))
+data$hour = factor(hour(hms(data$Time)))
+day_data <- data %>% group_by(day) %>% dplyr::summarize(Trips = n())
+day_data
+ggplot(day_data, aes(day, Trips)) + 
+  geom_bar(stat = "identity", fill = "blue") +
+  ggtitle("Trips by day of the month") + 
+  theme(legend.position = "none") + 
+  scale_y_continuous(labels = comma)
+hourly_data <- data %>% 
+  group_by(hour) %>% 
+  dplyr::summarize(Total = n())
+datatable(hourly_data)
+ggplot(hourly_data, aes(hour, Total)) + 
+  geom_bar(stat="identity", 
+           fill="yellow", 
+           color="purple") + 
+  ggtitle("Trips Every Hour", subtitle = "Aggregated today") + 
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5), 
+        plot.subtitle = element_text(hjust = 0.5)) + 
+  scale_y_continuous(labels=comma)
+weekday_data <- data %>% group_by(dayofweek) %>% dplyr::summarize(Trips = n())
+weekday_data
+ggplot(weekday_data, aes(dayofweek, Trips)) + 
+  geom_bar(stat = "identity", fill = "red") +
+  ggtitle("Trips by days of the week per month") + 
+  theme(legend.position = "none") + 
+  scale_y_continuous(labels = comma)
+day_hour_data <- data %>% group_by(dayofweek, hour) %>% dplyr::summarize(Total = n())
+datatable(day_hour_data)
+ggplot(day_hour_data, aes(dayofweek, hour, fill = Total)) + 
+  geom_tile(color = "white") + 
+  ggtitle("Heat Map by Hour and Day")
+#Map of the New York city
+min_lat <- 40 
+max_lat <- 40.91
+min_long <- -74.15
+max_long <- -73.7004
+
+ggplot(data, aes(x=Lon, y=Lat)) +
+  geom_point(size=1, color = "green") +
+  scale_x_continuous(limits=c(min_long, max_long)) +
+  scale_y_continuous(limits=c(min_lat, max_lat)) +
+  theme_map() +
+  ggtitle("Map of UBER rides during SEP, 2014")
